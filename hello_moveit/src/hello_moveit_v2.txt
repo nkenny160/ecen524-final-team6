@@ -1,0 +1,108 @@
+#include <memory>
+#include <rclcpp/rclcpp.hpp>
+#include <moveit/move_group_interface/move_group_interface.h>
+#include <moveit_msgs/msg/grasp.hpp>
+#include <control_msgs/action/gripper_command.hpp>
+#include <control_msgs/msg/gripper_command.hpp>
+#include <rclcpp_action/rclcpp_action.hpp>
+
+int main(int argc, char* argv[]) {
+  // Initialize ROS and create the Node
+  rclcpp::init(argc, argv);
+  auto const node = std::make_shared<rclcpp::Node>(
+      "hello_moveit_gripper",
+      rclcpp::NodeOptions().automatically_declare_parameters_from_overrides(true));
+
+  // Create a ROS logger
+  auto const logger = rclcpp::get_logger("hello_moveit_gripper");
+
+  // Create the MoveIt MoveGroup Interface for the arm
+  using moveit::planning_interface::MoveGroupInterface;
+  auto move_group_interface_arm = MoveGroupInterface(node, "panda_arm");
+
+  // Create the MoveIt MoveGroup Interface for the gripper
+  auto move_group_interface_gripper = MoveGroupInterface(node, "panda_gripper");
+
+  // Set a target Pose for the arm
+  auto const target_pose = [] {
+    geometry_msgs::msg::Pose msg;
+    msg.orientation.w = 1.0;
+    msg.position.x = 0.28;
+    msg.position.y = -0.2;
+    msg.position.z = 0.5;
+    return msg;
+  }();
+  move_group_interface_arm.setPoseTarget(target_pose);
+
+  // Create a plan to that target pose for the arm
+  auto const [success_arm, plan_arm] = [&move_group_interface_arm] {
+    moveit::planning_interface::MoveGroupInterface::Plan msg;
+    auto const ok = static_cast<bool>(move_group_interface_arm.plan(msg));
+    return std::make_pair(ok, msg);
+  }();
+
+  // Execute the plan for the arm
+  if (success_arm) {
+    move_group_interface_arm.execute(plan_arm);
+
+    // Actuate the gripper (open)
+    moveit_msgs::msg::GripperCommand open_gripper_command;
+    open_gripper_command.position.push_back(0.04); // Adjust based on your gripper's open position
+    open_gripper_command.max_effort = 100.0; // Adjust max effort as needed
+    move_group_interface_grippe// Create a plan to that target pose
+  auto const [success, plan] = [&move_group_interface_arm]{
+    moveit::planning_interface::MoveGroupInterface::Plan msg;
+    auto const ok = static_cast<bool>(move_group_interface_arm.plan(msg));
+    return std::make_pair(ok, msg);
+  }();
+
+  // Execute the plan
+  if(success) {
+    move_group_interface_arm.execute(plan);
+  } else {
+    RCLCPP_ERROR(logger, "Planning failed!");
+  }r.setGripperCommand(open_gripper_command);
+
+    auto const [success_open_gripper, plan_open_gripper] =
+        [&move_group_interface_gripper] {
+          moveit::planning_interface::MoveGroupInterface::Plan msg;
+          auto const ok = static_cast<bool>(move_group_interface_gripper.plan(msg));
+          return std::make_pair(ok, msg);
+        }();
+
+    if (success_open_gripper) {
+      move_group_interface_gripper.execute(plan_open_gripper);
+      RCLCPP_INFO(logger, "Gripper opened");
+
+      // Actuate the gripper (close)
+      moveit_msgs::msg::GripperCommand close_gripper_command;
+      close_gripper_command.position.push_back(0.0); // Adjust based on your gripper's closed position
+      close_gripper_command.max_effort = 100.0; // Adjust max effort as needed
+      move_group_interface_gripper.setGripperCommand(close_gripper_command);
+
+      auto const [success_close_gripper, plan_close_gripper] =
+          [&move_group_interface_gripper] {
+            moveit::planning_interface::MoveGroupInterface::Plan msg;
+            auto const ok = static_cast<bool>(move_group_interface_gripper.plan(msg));
+            return std::make_pair(ok, msg);
+          }();
+
+      if (success_close_gripper) {
+        move_group_interface_gripper.execute(plan_close_gripper);
+        RCLCPP_INFO(logger, "Gripper closed");
+      } else {
+        RCLCPP_ERROR(logger, "Gripper close planning failed!");
+      }
+
+    } else {
+      RCLCPP_ERROR(logger, "Gripper open planning failed!");
+    }
+
+  } else {
+    RCLCPP_ERROR(logger, "Arm planning failed!");
+  }
+
+  // Shutdown ROS
+  rclcpp::shutdown();
+  return 0;
+}
