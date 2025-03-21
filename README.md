@@ -1,4 +1,6 @@
 # Automated Pick-and-Place of Balls using a Franka Emika Robot and ZED 2i Camera
+Github Link to this repository: (https://github.com/nkenny160/ecen524-final-team6/tree/main)
+
 This repository contains the code we used to implement automated pick and place using the Franka Emika Panda Robot and a Stereolabs ZED 2i camera. The code is well documented and fairly easy to understand. In order to run this code, please follow the steps below.
 
 ## Preface
